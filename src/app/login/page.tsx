@@ -29,7 +29,7 @@ export default function Login() {
             } else {
                 setError(data.error || 'Ошибка авторизации');
             }
-        } catch (err) {
+        } catch {
             setError('Ошибка сервера');
         }
     };

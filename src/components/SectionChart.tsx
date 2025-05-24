@@ -140,11 +140,6 @@ export function SectionChart({ points }: SectionChartProps) {
                 const points = zone.points;
                 if (points.length < 2) return null;
 
-                // Создаем path для зоны
-                const pathData = points.map((point, i) =>
-                    `${i === 0 ? 'M' : 'L'} ${50 + normalizeY(point.y)} ${550 - normalizeZ(point.z)}`
-                ).join(' ');
-
                 return (
                     <g key={`zone-${zoneIndex}`}>
                         {/* Линия зоны */}

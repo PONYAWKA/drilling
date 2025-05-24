@@ -98,13 +98,10 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
         scene.add(light)
         // Сохраняем камеру в window для доступа из других компонентов
         if (typeof window !== 'undefined') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (window as any).__drillCameraRef = camera;
         }
 
-
-        // x: -1882 до 1882
-        // y: -1560 до 1560
-        // z: 0 до 2100
         const floorGeometry = new THREE.PlaneGeometry(3764 * SCALE, 2100)
         const floorMaterial = new THREE.MeshBasicMaterial({
             color: 0xcccccc,
@@ -187,10 +184,11 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
             });
             const line = new THREE.Line(lineGeometry, lineMaterial);
             if ((iteration / -500) % 2 === 0) {
-                const textSprite = createTextSprite(String((iteration / -300) * 3), '#aaacad', true);
+                const textSprite = createTextSprite(String(27 + (iteration / -500)), '#aaacad', true);
                 if (textSprite) {
                     textSprite.position.set(1882 + iteration, -1960, 2250);
                     scene.add(textSprite);
+
                 }
                 const sprite = createTextSprite(String((iteration / -300) * 3), '#aaacad', false);
                 if (sprite) {
@@ -313,11 +311,15 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
             scene.remove(meshRef.current);
         }
 
-        const mesh = new THREE.ObjectLoader().parse(surface);
-        mesh.receiveShadow = true;
-        mesh.castShadow = true;
-        meshRef.current = mesh;
-        scene.add(mesh);
+        const loadedObject = new THREE.ObjectLoader().parse(surface);
+        if (loadedObject instanceof THREE.Mesh) {
+            loadedObject.receiveShadow = true;
+            loadedObject.castShadow = true;
+            meshRef.current = loadedObject;
+            scene.add(loadedObject);
+        } else {
+            console.error('Loaded object is not a mesh:', loadedObject);
+        }
 
         while (sectionLinesRef.current.children.length > 0) {
             const obj = sectionLinesRef.current.children[0];
