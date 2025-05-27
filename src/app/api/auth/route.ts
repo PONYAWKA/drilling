@@ -18,7 +18,7 @@ export async function POST(request: Request) {
         }
         
         return NextResponse.json({ success: false, error: 'Неверный пароль' }, { status: 401 });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ success: false, error: 'Ошибка сервера' }, { status: 500 });
     }
 } 

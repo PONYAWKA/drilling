@@ -19,10 +19,7 @@ export default function Home() {
   const [currentFile, setCurrentFile] = useState<string>('');
   const [sectionX, setSectionX] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [totalFiles, setTotalFiles] = useState(0);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const mountRef = useRef<HTMLDivElement>(null);
-  const [cameraInfo, setCameraInfo] = useState<{ position: THREE.Vector3, target: THREE.Vector3, up: THREE.Vector3, quaternion: THREE.Quaternion } | null>(null);
   const [surface, setSurface] = useState<SurfaceFile | null>(null);
 
   const handleFileSelect = useCallback(async (filename: string) => {
@@ -45,6 +42,8 @@ export default function Home() {
       parsedPoints = validPoints;
 
       setSurface(surfaceData);
+      // Преобразуем массив в формат PointGridJSON
+      //@ts-expect-error: convertToPointGrid принимает PointGridJSON, но content.array - это number[][][]
       const grid = convertToPointGrid(content.array);
       setPointGrid(grid);
       setCurrentFile(filename);
@@ -64,8 +63,8 @@ export default function Home() {
         throw new Error('Ошибка при получении следующего файла');
       }
       const data = await response.json();
-      setTotalFiles(data.totalFiles);
-      setCurrentIndex(data.currentIndex);
+
+
       await handleFileSelect(data.filename);
     } catch (error) {
       setError('Ошибка при загрузке файла');
@@ -89,11 +88,6 @@ export default function Home() {
   // Получаем все точки для 3D (только верхние)
   const allPoints = useMemo(() => getTopPoints(pointGrid), [pointGrid]);
 
-  // Получаем уникальные X для выбора
-  const uniqueX = useMemo(() =>
-    Array.from(pointGrid.keys()).sort((a, b) => a - b),
-    [pointGrid]
-  );
 
   // Получаем все точки для выбранного X (все слои)
   const sectionPoints = useMemo(() => {
@@ -113,7 +107,13 @@ export default function Home() {
         cam.getWorldDirection(dir);
         const target = pos.clone().add(dir);
         const quaternion = cam.quaternion.clone();
-        setCameraInfo({ position: pos, target, up, quaternion });
+        // Сохраняем информацию о камере для отладки
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Camera position:', pos);
+          console.log('Camera target:', target);
+          console.log('Camera up:', up);
+          console.log('Camera quaternion:', quaternion);
+        }
       }
     }, 6000);
     return () => clearInterval(interval);
@@ -134,18 +134,33 @@ export default function Home() {
 
   return (
     <main className={styles.main}>
-      <div className={styles.content}>
-        <div className={styles.section}>
-          <h2 className={styles.title}>Текущий файл</h2>
-          <div className={styles.fileInfo}>
-            <button
-              onClick={handlePlayPause}
-              className={`${styles.playButton} ${isPlaying ? styles.playButtonPlaying : styles.playButtonPaused}`}
-            >
-              {isPlaying ? '⏸️ Пауза' : '▶️ Плей'}
-            </button>
-          </div>
+      {/* --- Легенда из скриншота --- */}
+      <div className={styles.legendBlock}>
+        <div className={styles.legendTitle}>Склад 320. Секция №1</div>
+        <div className={styles.legendRow}>
+          <span className={styles.legendDot} style={{ background: '#A259FF' }}></span>
+          <span className={styles.legendText}>Богатая, &gt; 40%</span>
         </div>
+        <div className={styles.legendRow}>
+          <span className={styles.legendDot} style={{ background: '#2CD9C5' }}></span>
+          <span className={styles.legendText}>Рядовая, 37–39%</span>
+        </div>
+        <div className={styles.legendRow}>
+          <span className={styles.legendDot} style={{ background: '#FFE066' }}></span>
+          <span className={styles.legendText}>Бедная, &lt;37%</span>
+        </div>
+        <div className={styles.fileInfo}>
+          <button
+            onClick={handlePlayPause}
+            className={`${styles.playButton} ${isPlaying ? styles.playButtonPlaying : styles.playButtonPaused}`}
+          >
+            {isPlaying ? '⏸️ Пауза' : '▶️ Плей'}
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.content}>
+
 
         {/* <div className={styles.section}>
           <h2 className={styles.title}>Срез по X</h2>
@@ -207,9 +222,9 @@ export default function Home() {
             <span className={styles.infoLabel}>Угол стрелы реклаймера</span>
             <span className={styles.infoValue}>25°</span>
           </div>
-          <div className={styles.hotline}>
-            ГОРЯЧАЯ ЛИНИЯ <span className={styles.hotlineNumber}>8 (914) 920 18 89</span>
-          </div>
+        </div>
+        <div className={styles.hotline}>
+          ГОРЯЧАЯ ЛИНИЯ <span className={styles.hotlineNumber}>8 (914) 920 18 89</span>
         </div>
       </div>
       {/* --- Вывод инфы о камере --- */}

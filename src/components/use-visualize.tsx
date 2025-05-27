@@ -48,7 +48,7 @@ function createTextSprite(message: string, color: string, enable: boolean) {
     const spriteMaterial = new THREE.SpriteMaterial({
         map: texture,
         transparent: true,
-        depthTest: false
+        opacity: 0.4
     });
 
     const sprite = new THREE.Sprite(spriteMaterial);
@@ -65,9 +65,14 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
     const meshRef = useRef<THREE.Mesh | null>(null);
     const sectionLinesRef = useRef<THREE.Group | null>(null);
-
+    const trolleyRef = useRef<THREE.Mesh | null>(null);
+    const textSpritesRef = useRef<THREE.Sprite[]>([]);
+    const trolleyTargetX = useRef<number | null>(null);
+    const spriteLinePairsRef = useRef<{ sprite: THREE.Sprite, line: THREE.Line }[]>([]);
+    const prevSelectedLineRef = useRef<THREE.Line | null>(null);
     useLayoutEffect(() => {
         const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x202528, 0.00014);
         scene.background = new THREE.Color(0x202528);
         const width = mountRef.current.clientWidth;
         const height = mountRef.current.clientHeight;
@@ -98,13 +103,10 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
         scene.add(light)
         // Сохраняем камеру в window для доступа из других компонентов
         if (typeof window !== 'undefined') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (window as any).__drillCameraRef = camera;
         }
 
-
-        // x: -1882 до 1882
-        // y: -1560 до 1560
-        // z: 0 до 2100
         const floorGeometry = new THREE.PlaneGeometry(3764 * SCALE, 2100)
         const floorMaterial = new THREE.MeshBasicMaterial({
             color: 0xcccccc,
@@ -171,6 +173,18 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
         floorBack.rotation.x = Math.PI / 2; // поворачиваем на 180 градусов
         scene.add(floorBack);
 
+
+        const trolleyGeometry = new THREE.BoxGeometry(800, 400, 200);
+        const trolleyMaterial = new THREE.MeshBasicMaterial({
+            color: 0x2CD9C5,
+            transparent: true,
+            opacity: 0.5
+        });
+        const trolley = new THREE.Mesh(trolleyGeometry, trolleyMaterial);
+        trolley.position.set(0, -1760, 2200);
+        scene.add(trolley);
+        trolleyRef.current = trolley;
+
         const makeLine = (iteration: number, color: number) => {
 
             const linePoints: THREE.Vector3[] = [
@@ -187,10 +201,12 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
             });
             const line = new THREE.Line(lineGeometry, lineMaterial);
             if ((iteration / -500) % 2 === 0) {
-                const textSprite = createTextSprite(String((iteration / -300) * 3), '#aaacad', true);
+                const textSprite = createTextSprite(String(27 + (iteration / -500)), '#aaacad', true);
                 if (textSprite) {
-                    textSprite.position.set(1882 + iteration, -1960, 2250);
+                    textSprite.position.set(1882 + iteration, -1960, 2500);
                     scene.add(textSprite);
+                    textSpritesRef.current.push(textSprite);
+                    spriteLinePairsRef.current.push({ sprite: textSprite, line });
                 }
                 const sprite = createTextSprite(String((iteration / -300) * 3), '#aaacad', false);
                 if (sprite) {
@@ -237,6 +253,19 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
             lastTime = now;
             controls.update(delta);
             renderer.render(scene, camera);
+
+            if (trolleyRef.current && trolleyTargetX.current !== null) {
+                const trolley = trolleyRef.current;
+                const dx = trolleyTargetX.current - trolley.position.x;
+                // Если близко к цели — фиксируем позицию и сбрасываем цель
+                if (Math.abs(dx) < 1) {
+                    trolley.position.x = trolleyTargetX.current;
+                    trolleyTargetX.current = null;
+                } else {
+                    trolley.position.x += dx * 0.009     // — коэффициент инерции, можно увеличить/уменьшить
+                }
+            }
+
         };
         animate();
 
@@ -255,6 +284,26 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
             const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(x, y), cameraRef.current);
+
+            const intersectsSprites = raycaster.intersectObjects(textSpritesRef.current);
+            if (intersectsSprites.length > 0) {
+                const sprite = intersectsSprites[0].object as THREE.Sprite;
+                if (trolleyRef.current) {
+                    trolleyTargetX.current = sprite.position.x;
+                }
+                // Меняем цвет линии, связанной с этим спрайтом
+                const pair = spriteLinePairsRef.current.find(p => p.sprite === sprite);
+                if (pair) {
+                    // Сбросить цвет предыдущей выбранной линии, если есть
+                    if (prevSelectedLineRef.current && prevSelectedLineRef.current !== pair.line) {
+                        (prevSelectedLineRef.current.material as THREE.LineBasicMaterial).color.set(0xffffff); // исходный цвет
+                    }
+                    // Установить цвет новой выбранной линии
+                    (pair.line.material as THREE.LineBasicMaterial).color.set(0xff0000); // красный
+                    prevSelectedLineRef.current = pair.line;
+                }
+                return;
+            }
 
             // Находим mesh поверхности
             const mesh = meshRef.current;
@@ -275,6 +324,8 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
                 }, uniqueX[0]);
                 onSectionXChange(closestX);
             }
+
+
         };
         mountRef.current.addEventListener('click', handleClick);
 
@@ -313,11 +364,15 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
             scene.remove(meshRef.current);
         }
 
-        const mesh = new THREE.ObjectLoader().parse(surface);
-        mesh.receiveShadow = true;
-        mesh.castShadow = true;
-        meshRef.current = mesh;
-        scene.add(mesh);
+        const loadedObject = new THREE.ObjectLoader().parse(surface);
+        if (loadedObject instanceof THREE.Mesh) {
+            loadedObject.receiveShadow = true;
+            loadedObject.castShadow = true;
+            meshRef.current = loadedObject;
+            scene.add(loadedObject);
+        } else {
+            console.error('Loaded object is not a mesh:', loadedObject);
+        }
 
         while (sectionLinesRef.current.children.length > 0) {
             const obj = sectionLinesRef.current.children[0];

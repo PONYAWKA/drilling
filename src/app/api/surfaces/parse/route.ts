@@ -3,6 +3,7 @@ import { validatePoints } from '@/utils/pointParser';
 import * as THREE from 'three';
 import fs from 'fs';
 import path from 'path';
+import { Point } from '@/types/surface';
 
 export async function POST(request: Request) {
     try {
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
         const content = fs.readFileSync(filePath, 'utf-8');
         
         // Парсим точки
-        const points = JSON.parse(content).surface_points;
+        const points = JSON.parse(content).surface_points as Point[];
         
         // Фильтруем невалидные точки
         const isPointsValid = validatePoints(points)

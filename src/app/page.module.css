@@ -86,7 +86,6 @@
 }
 
 .main {
-  min-height: 100vh;
   display: flex;
   flex-direction: row;
 }
@@ -194,6 +193,8 @@
   height: 100vh;
   background-color: #202528;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 .infoBlock {
@@ -246,10 +247,11 @@
 }
 
 .hotline {
-  margin-top: 18px;
+  margin-top: auto;
   color: #bfc2c7;
   font-size: 15px;
   letter-spacing: 1px;
+  align-self: flex-end;
 }
 
 .hotlineNumber {
@@ -258,4 +260,39 @@
   font-weight: 700;
   margin-left: 8px;
   letter-spacing: 2px;
+}
+
+.legendBlock {
+  border-radius: 12px;
+  padding: 18px 24px 12px 24px;
+  margin-bottom: 24px;
+  width: fit-content;
+  position: absolute;
+}
+
+.legendTitle {
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.legendDot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 10px;
+  display: inline-block;
+  border: 2px solid #23272f;
+}
+
+.legendText {
+  color: #bfc4cc;
+  font-size: 1rem;
 }

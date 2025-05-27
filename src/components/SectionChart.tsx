@@ -88,6 +88,9 @@ export function SectionChart({ points }: SectionChartProps) {
         return ticks;
     }, []);
 
+    const N = 0; // порог по Z
+    const M = 0; // порог по Y
+
     if (points.length === 0) {
         return (
             <div className="w-[600px] h-[600px] flex items-center justify-center text-gray-500">
@@ -137,19 +140,80 @@ export function SectionChart({ points }: SectionChartProps) {
 
             {/* Отображаем зоны */}
             {colorZones.map((zone, zoneIndex) => {
+                if (zone.color.toLowerCase() === '#ffffff' || zone.color.toLowerCase() === 'white') return null;
                 const points = zone.points;
-                if (points.length < 2) return null;
+                if (points.length < 3) return null;
 
-                // Создаем path для зоны
-                const pathData = points.map((point, i) =>
-                    `${i === 0 ? 'M' : 'L'} ${50 + normalizeY(point.y)} ${550 - normalizeZ(point.z)}`
-                ).join(' ');
+                // Группируем по Y: ищем maxZ и minZ для каждого Y
+                const yMap = new Map<number, { max: Point, min: Point }>();
+                points.forEach(point => {
+                    if (!yMap.has(point.y)) {
+                        yMap.set(point.y, { max: point, min: point });
+                    } else {
+                        const entry = yMap.get(point.y)!;
+                        if (point.z > entry.max.z) entry.max = point;
+                        if (point.z < entry.min.z) entry.min = point;
+                    }
+                });
+
+                // Фильтруем по расстоянию между maxZ и minZ
+                const yValues = Array.from(yMap.keys()).sort((a, b) => a - b);
+                const crestPoints: Point[] = [];
+                const bottomPoints: Point[] = [];
+                yValues.forEach(y => {
+                    const { max, min } = yMap.get(y)!;
+                    if (Math.abs(max.z - min.z) >= N) {
+                        crestPoints.push(max);
+                        bottomPoints.push(min);
+                    }
+                });
+
+                if (crestPoints.length < 3) return null;
+
+                // Фильтрация по расстоянию по Y для гребня
+                const filteredCrest: Point[] = [];
+                for (let i = 0; i < crestPoints.length; i++) {
+                    if (
+                        i === 0 ||
+                        Math.abs(crestPoints[i].y - crestPoints[i - 1].y) >= M
+                    ) {
+                        filteredCrest.push(crestPoints[i]);
+                    }
+                }
+
+                // Фильтрация по расстоянию по Y для дна
+                const filteredBottom: Point[] = [];
+                for (let i = 0; i < bottomPoints.length; i++) {
+                    if (
+                        i === 0 ||
+                        Math.abs(bottomPoints[i].y - bottomPoints[i - 1].y) >= M
+                    ) {
+                        filteredBottom.push(bottomPoints[i]);
+                    }
+                }
+
+                if (filteredCrest.length < 3) return null;
+
+                const areaPoints = [
+                    ...filteredCrest,
+                    ...filteredBottom.reverse(),
+                    filteredCrest[0]
+                ];
+                const svgPoints = areaPoints.map(point => [
+                    50 + normalizeY(point.y),
+                    550 - normalizeZ(point.z)
+                ]);
+                const pointsStr = svgPoints.map(([x, y]) => `${x},${y}`).join(' ');
 
                 return (
                     <g key={`zone-${zoneIndex}`}>
-                        {/* Линия зоны */}
-
-                        {/* Точки зоны */}
+                        <polygon
+                            points={pointsStr}
+                            fill={zone.color}
+                            fillOpacity={0.5}
+                            stroke={zone.color}
+                            strokeWidth={2}
+                        />
                         {points.map((point, pointIndex) => (
                             <circle
                                 key={`point-${zoneIndex}-${pointIndex}`}
