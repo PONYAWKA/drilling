@@ -206,7 +206,7 @@ export function useVisualize({ points, mountRef, onSectionXChange, selectedSecti
                     textSprite.position.set(1882 + iteration, -1960, 2500);
                     scene.add(textSprite);
                     textSpritesRef.current.push(textSprite);
-                    spriteLinePairsRef.current.push({ sprite: textSprite, line });
+                    spriteLinePairsRef.current.push({ sprite: textSprite, line })
                 }
                 const sprite = createTextSprite(String((iteration / -300) * 3), '#aaacad', false);
                 if (sprite) {

@@ -1,5 +1,13 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Point } from '@/types/surface';
+
+declare global {
+    namespace JSX {
+        interface IntrinsicElements {
+            [elemName: string]: any;
+        }
+    }
+}
 
 interface SectionChartProps {
     points: Point[];
