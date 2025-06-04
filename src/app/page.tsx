@@ -2,29 +2,31 @@
 
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { loadSurfaceFileContent, loadSurface } from '@/utils/fileManager';
-import { useVisualize } from '@/components/use-visualize';
-import { SectionChart } from '@/components/SectionChart';
+import { useVisualize } from '@/components/use-visualize/use-visualize';
 import { PointGrid, getTopPoints, getAllSectionPoints, Point, convertToPointGrid, SurfaceFile } from '@/types/surface';
 import * as THREE from 'three';
 import styles from './page.module.css';
+import { SectionChart3 } from '@/components/section-chart/SectionChart3';
 
 interface SurfaceContent {
   surface_points: Point[];
   array: number[][][];
+  avg_disappeared_quality: number | null;
 }
 
 export default function Home() {
   const [pointGrid, setPointGrid] = useState<PointGrid>(new Map());
-  const [error, setError] = useState<string>('');
   const [currentFile, setCurrentFile] = useState<string>('');
   const [sectionX, setSectionX] = useState<number | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const mountRef = useRef<HTMLDivElement>(null);
   const [surface, setSurface] = useState<SurfaceFile | null>(null);
+  const [avgDisappearedQuality, setAvgDisappearedQuality] = useState<number | null>(null);
 
   const handleFileSelect = useCallback(async (filename: string) => {
     try {
       const content = await loadSurfaceFileContent(filename) as SurfaceContent;
+
       const surfaceData = await loadSurface(filename);
       let parsedPoints = content.surface_points;
       if (!isPlaying) {
@@ -45,11 +47,10 @@ export default function Home() {
       // Преобразуем массив в формат PointGridJSON
       //@ts-expect-error: convertToPointGrid принимает PointGridJSON, но content.array - это number[][][]
       const grid = convertToPointGrid(content.array);
+      setAvgDisappearedQuality(content.avg_disappeared_quality);
       setPointGrid(grid);
       setCurrentFile(filename);
-      setError('');
     } catch (error) {
-      setError('Ошибка при загрузке файла');
       console.error('Ошибка при загрузке файла:', error);
       setIsPlaying(false);
     }
@@ -67,7 +68,6 @@ export default function Home() {
 
       await handleFileSelect(data.filename);
     } catch (error) {
-      setError('Ошибка при загрузке файла');
       console.error('Ошибка при загрузке файла:', error);
       setIsPlaying(false);
     }
@@ -81,9 +81,6 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [fetchNextFile, isPlaying]);
 
-  const handlePlayPause = () => {
-    setIsPlaying(prev => !prev);
-  };
 
   // Получаем все точки для 3D (только верхние)
   const allPoints = useMemo(() => getTopPoints(pointGrid), [pointGrid]);
@@ -129,8 +126,19 @@ export default function Home() {
     mountRef: mountRef as React.RefObject<HTMLDivElement>,
     onSectionXChange: setSectionX,
     selectedSectionX: sectionX,
-    surface: surface!
+    surface: surface!,
   });
+
+  // Функция для извлечения времени из имени файла
+  const extractTimeFromFileName = (fileName: string): string => {
+    // Ищем паттерн времени в формате ЧЧ-ММ-СС
+    const timeMatch = fileName.match(/(\d{2})-(\d{2})-(\d{2})/);
+    if (timeMatch) {
+      // Возвращаем только часы и минуты
+      return `${timeMatch[1]}:${timeMatch[2]}`;
+    }
+    return fileName; // Если паттерн не найден, возвращаем исходное имя
+  };
 
   return (
     <main className={styles.main}>
@@ -138,53 +146,41 @@ export default function Home() {
       <div className={styles.legendBlock}>
         <div className={styles.legendTitle}>Склад 320. Секция №1</div>
         <div className={styles.legendRow}>
+          <img src="/fingers.svg" alt="legend-1" />
           <span className={styles.legendDot} style={{ background: '#A259FF' }}></span>
-          <span className={styles.legendText}>Богатая, &gt; 40%</span>
+          <span className={styles.legendText}>Богатая, &gt; 39%</span>
         </div>
         <div className={styles.legendRow}>
+          <img src="/fingers.svg" alt="legend-1" />
+
+          <span className={styles.legendDot} style={{ background: '#04bd3b' }}></span>
+          <span className={styles.legendText}>Целевая 35.4 - 38.9%</span>
+        </div>
+        <div className={styles.legendRow}>
+          <img src="/fingers.svg" alt="legend-1" />
+
           <span className={styles.legendDot} style={{ background: '#2CD9C5' }}></span>
-          <span className={styles.legendText}>Рядовая, 37–39%</span>
+          <span className={styles.legendText}>Рядовая, 30.7 - 35.3%</span>
         </div>
         <div className={styles.legendRow}>
+          <img src="/fingers.svg" alt="legend-1" />
+
           <span className={styles.legendDot} style={{ background: '#FFE066' }}></span>
-          <span className={styles.legendText}>Бедная, &lt;37%</span>
-        </div>
-        <div className={styles.fileInfo}>
-          <button
-            onClick={handlePlayPause}
-            className={`${styles.playButton} ${isPlaying ? styles.playButtonPlaying : styles.playButtonPaused}`}
-          >
-            {isPlaying ? '⏸️ Пауза' : '▶️ Плей'}
-          </button>
+          <span className={styles.legendText}>Бедная, &lt;30.6%</span>
         </div>
       </div>
 
       <div className={styles.content}>
 
-
-        {/* <div className={styles.section}>
-          <h2 className={styles.title}>Срез по X</h2>
-          <select
-            value={sectionX ?? ''}
-            onChange={e => setSectionX(e.target.value ? Number(e.target.value) : null)}
-            className={styles.select}
-          >
-            <option value="">Выберите X</option>
-            {uniqueX.map(x => (
-              <option key={x} value={x}>{x}</option>
-            ))}
-          </select>
-        </div> */}
-
-        {error && <div className={styles.error}>{error}</div>}
       </div>
 
       <div ref={mountRef} className={styles.visualizer} />
       <div className={styles.sidePanel}>
+        <div className={styles.time}>{extractTimeFromFileName(currentFile)}</div>
         <div className={styles.chart}>
-          <div className={styles.chartTitle}>Разрез оси в #11/55м</div>
+          <div className={styles.chartTitle}>Разрез оси в #11 / 55м</div>
           <div className={styles.chartContent}>
-            <SectionChart points={sectionPoints} />
+            <SectionChart3 points={sectionPoints.filter(p => p.color !== '#ffffff')} />
           </div>
         </div>
         <div className={styles.infoBlock}>
@@ -207,6 +203,12 @@ export default function Home() {
             </span>
           </div>
           <div className={styles.infoRow}>
+            <span className={styles.infoLabel}>Качество собираемой руды</span>
+            <span className={styles.infoValue}>
+              {(avgDisappearedQuality ?? 0).toFixed(2)} <span className={styles.infoDot}></span>
+            </span>
+          </div>
+          <div className={styles.infoRow}>
             <span className={styles.infoLabel}>Раб. зона реклаймера</span>
             <span className={styles.infoValue}>55–75м</span>
           </div>
@@ -223,19 +225,13 @@ export default function Home() {
             <span className={styles.infoValue}>25°</span>
           </div>
         </div>
-        <div className={styles.hotline}>
-          ГОРЯЧАЯ ЛИНИЯ <span className={styles.hotlineNumber}>8 (914) 920 18 89</span>
-        </div>
+        {/* <div className={styles.hotlineBlock}>
+          <div className={styles.hotline}>
+            ГОРЯЧАЯ ЛИНИЯ <span className={styles.hotlineNumber}>8 (914) 920 18 89</span>
+          </div>
+        </div> */}
       </div>
-      {/* --- Вывод инфы о камере --- */}
-      {/* {cameraInfo && (
-        <div className={styles.cameraInfo}>
-          <div><b>Camera position:</b> [{cameraInfo.position.x.toFixed(2)}, {cameraInfo.position.y.toFixed(2)}, {cameraInfo.position.z.toFixed(2)}]</div>
-          <div><b>Camera target:</b> [{cameraInfo.target.x.toFixed(2)}, {cameraInfo.target.y.toFixed(2)}, {cameraInfo.target.z.toFixed(2)}]</div>
-          <div><b>Camera up:</b> [{cameraInfo.up.x.toFixed(2)}, {cameraInfo.up.y.toFixed(2)}, {cameraInfo.up.z.toFixed(2)}]</div>
-          <div><b>Camera quaternion:</b> [{cameraInfo.quaternion?.x}, {cameraInfo.quaternion.y.toFixed(4)}, {cameraInfo.quaternion.z.toFixed(4)}, {cameraInfo.quaternion.w.toFixed(4)}]</div>
-        </div>
-      )} */}
+
     </main>
   );
 }

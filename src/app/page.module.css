@@ -154,7 +154,7 @@
 
 .visualizer {
   height: 100vh;
-  width: calc(100vw - 500px) !important;
+  width: calc(100vw - 450px) !important;
 }
 
 .chart {
@@ -189,18 +189,20 @@
 .sidePanel {
   top: 0;
   right: 0;
-  width: 500px;
+  width: 450px;
   height: 100vh;
   background-color: #202528;
-  padding: 20px;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .infoBlock {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding-right: 48px;
   color: #fff;
   font-size: 32px;
   font-family: 'Inter', Arial, sans-serif;
@@ -210,12 +212,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
 }
 
 .infoLabel {
-  color: #bfc2c7;
-  font-size: 15px;
+  color: #A2A9B0;
+  font-size: 22.5px;
+  line-height: 24px;
 }
 
 .infoValue {
@@ -247,16 +249,20 @@
 }
 
 .hotline {
+  width: max-content;
+  position: absolute;
   margin-top: auto;
   color: #bfc2c7;
-  font-size: 15px;
+  font-size: 22.5px;
+  line-height: 24px;
   letter-spacing: 1px;
   align-self: flex-end;
 }
 
 .hotlineNumber {
   color: #fff;
-  font-size: 20px;
+  font-size: 34px;
+  line-height: 32px;
   font-weight: 700;
   margin-left: 8px;
   letter-spacing: 2px;
@@ -264,7 +270,7 @@
 
 .legendBlock {
   border-radius: 12px;
-  padding: 18px 24px 12px 24px;
+  padding: 28px 24px 12px 24px;
   margin-bottom: 24px;
   width: fit-content;
   position: absolute;
@@ -272,21 +278,26 @@
 
 .legendTitle {
   color: #fff;
-  font-size: 1.3rem;
+  margin-left: 32px;
+  font-size: 34px;
+  line-height: 32px;
   font-weight: 500;
   margin-bottom: 12px;
+  margin-bottom: 60px;
 }
 
 .legendRow {
   display: flex;
   align-items: center;
   margin-bottom: 6px;
+  margin-left: 40px;
 }
 
 .legendDot {
   width: 32px;
   height: 32px;
   border-radius: 50%;
+  margin-left: 4px;
   margin-right: 10px;
   display: inline-block;
   border: 2px solid #23272f;
@@ -295,4 +306,30 @@
 .legendText {
   color: #bfc4cc;
   font-size: 1rem;
+}
+
+.time {
+  color: #fff;
+  top: 0;
+  position: sticky;
+  font-size: 34px;
+  align-self: flex-end;
+  padding-right: 24px;
+  padding-top: 28px;
+  line-height: 32px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.chartTitle {
+  align-self: flex-start;
+  font-size: 22.5px;
+  line-height: 24px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.hotlineBlock {
+  position: relative;
+  height: 20px;
 }
